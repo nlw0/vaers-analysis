@@ -7,6 +7,14 @@ using Statistics
 using StatsBase
 using Distributions
 
+
+function myrand(d)
+    x = floor(Int,rand(d))
+    (x>0) ? x : myrand(d)
+end
+
+
+
 headers = ["Year", "Zip File", "VAERS DATA", "VAERS Symptoms", "VAERS Vaccine"]
 
 fsize = [
@@ -49,49 +57,27 @@ bar(fsize[:,1], fsize[:,5], m=3,l=2, title="VAERS vaccines file size",label="",y
 
 
 dd = CSV.read("/home/user/DATA/VAERS/2021VAERSVAX.csv", DataFrame)
+name = "HPV (GARDASIL 9)"
 sel = [x.VAX_NAME == "COVID19 (COVID19 (PFIZER-BIONTECH))" && !ismissing(x.VAX_LOT) for x in eachrow(dd)]
 sel = [x.VAX_NAME == "COVID19 (COVID19 (MODERNA))" && !ismissing(x.VAX_LOT) for x in eachrow(dd)]
 sel = [x.VAX_NAME == "COVID19 (COVID19 (JANSSEN))" && !ismissing(x.VAX_LOT) for x in eachrow(dd)]
 sel = [x.VAX_NAME == "COVID19 (COVID19 (UNKNOWN))" && !ismissing(x.VAX_LOT) for x in eachrow(dd)]
-sel = [x.VAX_NAME == "ZOSTER (SHINGRIX)" && !ismissing(x.VAX_LOT) && x.VAX_LOT ∉ ["UNKNOWN", "UNK", "58160082311"] for x in eachrow(dd)]
-sel = [x.VAX_NAME == "HPV (GARDASIL 9)" && !ismissing(x.VAX_LOT) && x.VAX_LOT ∉ ["UNKNOWN", "UNK", "58160082311"] for x in eachrow(dd)]
-sel = [x.VAX_NAME == "VARICELLA (VARIVAX)" && !ismissing(x.VAX_LOT) && x.VAX_LOT ∉ ["UNKNOWN", "UNK", "58160082311"] for x in eachrow(dd)]
+sel = [x.VAX_NAME == "ZOSTER (SHINGRIX)" && !ismissing(x.VAX_LOT) && (uppercase(x.VAX_LOT) ∉ ["UNKNOWN", "UNK", "58160082311"]) && !(length(x.VAX_LOT)>=5&&x.VAX_LOT[1:5]=="58160") for x in eachrow(dd)]
+sel = [x.VAX_NAME == "HPV (GARDASIL 9)" && !ismissing(x.VAX_LOT) && uppercase(x.VAX_LOT) ∉ ["UNKNOWN", "UNK", "58160082311"] for x in eachrow(dd)]
+sel = [x.VAX_NAME == name && !ismissing(x.VAX_LOT) && uppercase(x.VAX_LOT) ∉ ["UNKNOWN", "UNK", "58160082311"] for x in eachrow(dd)]
+sel = [x.VAX_NAME == "VARICELLA (VARIVAX)" && !ismissing(x.VAX_LOT) && uppercase(x.VAX_LOT) ∉ ["UNKNOWN", "UNK", "58160082311"] for x in eachrow(dd)]
+
+# sel = [x.VAX_NAME == "ZOSTER (SHINGRIX)" && !ismissing(x.VAX_LOT) && (uppercase(x.VAX_LOT) ∈ ["UNKNOWN", "UNK", "58160082311"]) for x in eachrow(dd)]
 
 coof = dd[sel,:]
-
-lots = map(coofm.VAX_LOT) do st
+lots = map(coof.VAX_LOT) do st
     st = join(uppercase(x) for x in st if isascii(x) && x in ['a':'z';'A':'Z';'0':'9'])
     (length(st)>6 && st[1:6] == "PFIZER") ? st[7:end] : (length(st)>3 && st[1:3] == "LOT") ? st[4:end] : st
 end
-ccm = hcat(sort([[a[1],a[2]] for a in countmap(lotsm)])...)
+cc = hcat(sort([[a[1],a[2]] for a in countmap(lots)])...)
 
-lotsp = map(coofp.VAX_LOT) do st
-    st = join(uppercase(x) for x in st if isascii(x) && x in ['a':'z';'A':'Z';'0':'9'])
-    (length(st)>6 && st[1:6] == "PFIZER") ? st[7:end] : (length(st)>3 && st[1:3] == "LOT") ? st[4:end] : st
-end
-ccp = hcat(sort([[a[1],a[2]] for a in countmap(lotsp)])...)
+cc[1,sortperm(cc[2,:])]
 
-lotsj = map(coofj.VAX_LOT) do st
-    st = join(uppercase(x) for x in st if isascii(x) && x in ['a':'z';'A':'Z';'0':'9'])
-    (length(st)>6 && st[1:6] == "PFIZER") ? st[7:end] : (length(st)>3 && st[1:3] == "LOT") ? st[4:end] : st
-end
-ccj = hcat(sort([[a[1],a[2]] for a in countmap(lotsj)])...)
-
-lots = map(coofz.VAX_LOT) do st
-    st = join(uppercase(x) for x in st if isascii(x) && x in ['a':'z';'A':'Z';'0':'9'])
-    (length(st)>3 && st[1:3] == "LOT") ? st[4:end] : st
-end
-ccz = hcat(sort([[a[1],a[2]] for a in countmap(lotsz)])...)
-
-# cc = ccm
-# cc = ccp
-# cc = ccj
-cc = ccz
-
-# plot(cc[1,:], m=3)
-# plot(cc[2,:], m=3)
-# bar(cc[1,:], cc[2,:], m=3)
-# plot(m=3)
 
 
 plot(bar(ccj[1,:], ccj[2,:],label="Janssen"), bar(ccm[1,:], ccm[2,:],label="Moderna"), bar(ccp[1,:], ccp[2,:],label="Pfizer"), bar(ccz[1,:], ccz[2,:],label="Shingrix"))
@@ -132,16 +118,20 @@ N = size(cc, 2)
 # name = "Shingrix"
 name = "Varivax"
 # name = "Gardasil"
-cc = ccz[:,sortperm(ccz[2,:],rev=true)]
+# cc = ccz[:,sortperm(ccz[2,:],rev=true)]
 q1 = sum(sort(cc[2, :], rev=true)[1:end*100÷1000]) / sum(cc[2, :])
+q2 = sum(sort(cc[2, :], rev=true)[1:end*20÷100]) / sum(cc[2, :])
 # q1 = sum(sort(cc[2, :], rev=true)[1:end*15÷1000]) / sum(cc[2, :])
 # q2 = sum(sort(cc[2, :], rev=true)[1:end*10÷1000]) / sum(cc[2, :])
 plot((1:N), cumsum(sort(cc[2, :]/1000, rev=true)), m=2, label=name, ylabel="Number of cases (thousands)", xlabel="Number of batches",xlim=(0,N), ylim=(0,1.1 * sum(cc[2,:]/1000)), title="VAERS stats for $name - $(size(cc,2)) batches, $(sum(cc[2,:])) cases")
 plot!([(1:N)[end*10÷100] ], [cumsum(sort(cc[2, :]/1000, rev=true))[end*10÷100]], m=5, color=:red, label="10% of batches = $(round(Int,q1*100))% of cases")
+plot!([(1:N)[end*20÷100] ], [cumsum(sort(cc[2, :]/1000, rev=true))[end*20÷100]], m=5, color=:red, label="20% of batches = $(round(Int,q2*100))% of cases")
 # plot!([(1:N)[end*15÷1000] ], [cumsum(sort(cc[2, :]/1000, rev=true))[end*15÷1000]], m=5, color=:red, label="1.5% of batches = $(round(Int,q1*100))% of cases")
 # plot!([(1:N)[end*10÷1000] ], [cumsum(sort(cc[2, :]/1000, rev=true))[end*10÷1000]], m=5, color=:green, label="1% of batches = $(round(Int,q2*100))% of cases")
 plot!(size=(800,800))
-savefig("vaers-$(lowercase.(name)).png")
+# savefig("vaers-$(lowercase.(name)).png")
+
+
 
 sum(sort(ccp[2, :], rev=true)[1:end*20÷1000]) / sum(ccp[2, :])
 sum(sort(ccp[2, :], rev=true)[1:end*15÷1000]) / sum(ccp[2, :])
@@ -183,24 +173,68 @@ plot!(sort(ccm[2, :], rev=true),m=2,msw=0.2, title="Worst batches", label="Moder
 
 
 
-
 ccz=ccj
 ccz=ccm
+
+Nc = size(cc,2)
+
+# simp = [myrand(Pareto(1.8,3.1)) for _ in 1:Nc] # shingrix
+# simp = [myrand(Pareto(1.5,2.0)) for _ in 1:Nc] # varivax
+# simp = [myrand(Pareto(1.1,2.0)) for _ in 1:Nc] # hpv
+simp = [myrand(Pareto(0.8,1.3)) for _ in 1:Nc] # hpv
+# simp = [myrand(Pareto(1.3,0.4)) for _ in 1:Nc] # pfizer
+# simp = [myrand(Pareto(1.3,0.4)) for _ in 1:Nc] # moderna
+plot(sort(cc[2,:], rev=true),l=3, m=2)
+plot!(sort(simp, rev=true),l=3,yaxis=:log, ylim=(0.6,30000), m=2,title="$name vs pareto")
+
+
 # simp = rand(Poisson(mean(ccz[2,:])), size(ccz,2))
 # simp = rand(Exponential(1/mean(ccz[2,:])), size(ccz,2))
 # simp = rand(Exponential(median(ccz[2,:])/log(2)), size(ccz,2))
-simp = rand(Exponential(median(1.2*ccz[2,:])/log(2)), size(ccz,2))
 # simp = rand(Exponential(median(4*ccz[2,:])/log(2)), size(ccz,2))
+# simp = floor.(Int, rand(Exponential(median(cc[2,:])/log(2)), round(Int,size(cc,2)*1.6)))
 
-Nn = 7750
+# simp = floor.(Int, rand(Exponential(mean(cc[2,:])*0.8), round(Int,size(cc,2)*1.5)))
+# simp = floor.(Int, rand(Exponential(mean(cc[2,:])*0.8), round(Int,size(cc,2)*1.5)))
+# simp = floor.(Int, rand(Exponential(mean(cc[2,:])*0.8), round(Int,size(cc,2))))
+# simp = [myrand(Exponential(mean(cc[2,:])*0.9)) for _ in 1:Nc]
+# simp = [myrand(Exponential(2.09*0.9)) for _ in 1:Nc]
+# simp = [myrand(Exponential(4)) for _ in 1:Nc]
+
+
+
+
+
+median([myrand(Pareto(2.1,0.2)) for _ in 1:Nc])
+
+[(a,t,mean([myrand(Pareto(a, t)) for _ in 1:Nc])) for a in 0.5:0.1:2.5, t in 0.2:0.1:2.0]
+
+# mean(sort(cc[2,:])[1:end*985÷1000])
+
+# plot(cumsum(sort(cc[2,:], rev=true)),l=3)
+# plot!(cumsum(sort(simp, rev=true)),l=3)
+
+
+# plot(cumsum(sort(cc[2,:], rev=true)),cumsum(sort(simp, rev=true)),l=3, ratio = 1)
+# plot!([0, sum(cc[2,:])],[0,sum(simp)], style=:dash, color=:black)
+
+plot(sort(cc[2,:], rev=true),sort(simp, rev=true),l=3, ratio = 1,m=3)
+plot!([minimum(cc[2,:]), maximum(cc[2,:])],[minimum(cc[2,:]), maximum(cc[2,:])], style=:dash, color=:black)
+
+plot!(sort(simp))
+
+
+# Nn = 7750
+Nn = 24
 bar(1:Nn, [count(x->x==n, ccz[2,:]) for n in 1:Nn], bar_width=0.4, title="Shingrix vs. Poisson distribution simulation", label="Shingrix")
-bar!((1:20) .+ 0.4, [count(x->floor(Int,x)==n, simp) for n in 1:20], bar_width=0.4, label="Exponential simulation")
+bar!((1:20) .+ 0.4, [count(x->x==n, simp) for n in 1:20], bar_width=0.4, label="Exponential simulation")
 # bar!((1:Nn) .+ 0.4, [count(x->round(Int,x)==n, simp) for n in 1:Nn], bar_width=0.4, label="Exponential simulation")
 
-plot(sort(ccz[2,:]))
-plot!(sort(simp))
 
 
 aa = hcat([[x...] for x in countmap(dd.VAX_NAME)]...)
 aa = aa[:,sortperm(aa[2,:],rev=true)]
 DataFrame(Name=aa[1,:], Count=aa[2,:])
+
+
+
