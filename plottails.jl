@@ -45,9 +45,9 @@ function plotfit(vn, cc, myexp, mypareto, ρ)
     # plot!(simp, (NN+1 .- (1:NN))/NN, xaxis=:log, yaxis=:log, m=3, label="Exponential sim.")
 
     plot(ct, (NN+1 .- (1:NN))/NN, yaxis=:log, m=3, label=vn, legend=:bottomleft, msw=0, ylim=(1/(NN*1.1), 1.0))
-    plot!(x, max.(1e-15, 1 .- cdf.(myexp, x)), l=3, label="Exponential fit"; axisargs[plotstyle]...)
-    plot!(x, max.(1e-15, 1 .- cdf.(mypareto, x)), l=3, label="Pareto fit"; axisargs[plotstyle]...)
-    plot!(x, max.(1e-15, 1 .- (ρ[1]*cdf.(mypareto, x) .+ ρ[2]*cdf.(myexp, x))), l=3, label="Mixture fit"; axisargs[plotstyle]...)
+    plot!(x, max.(1e-15, 1 .- cdf.(myexp, x)), l=3, label="Exponential model"; axisargs[plotstyle]...)
+    plot!(x, max.(1e-15, 1 .- cdf.(mypareto, x)), l=3, label="Pareto model"; axisargs[plotstyle]...)
+    plot!(x, max.(1e-15, 1 .- (ρ[1]*cdf.(mypareto, x) .+ ρ[2]*cdf.(myexp, x))), l=3, label="Mixture model"; axisargs[plotstyle]...)
 end
 
 allρ = [
