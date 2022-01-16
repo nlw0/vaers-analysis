@@ -64,19 +64,32 @@ sel = [x.VAX_NAME == "COVID19 (COVID19 (JANSSEN))" && !ismissing(x.VAX_LOT) for 
 sel = [x.VAX_NAME == "COVID19 (COVID19 (UNKNOWN))" && !ismissing(x.VAX_LOT) for x in eachrow(dd)]
 sel = [x.VAX_NAME == "ZOSTER (SHINGRIX)" && !ismissing(x.VAX_LOT) && (uppercase(x.VAX_LOT) ∉ ["UNKNOWN", "UNK", "58160082311"]) && !(length(x.VAX_LOT)>=5&&x.VAX_LOT[1:5]=="58160") for x in eachrow(dd)]
 sel = [x.VAX_NAME == "HPV (GARDASIL 9)" && !ismissing(x.VAX_LOT) && uppercase(x.VAX_LOT) ∉ ["UNKNOWN", "UNK", "58160082311"] for x in eachrow(dd)]
-sel = [x.VAX_NAME == name && !ismissing(x.VAX_LOT) && uppercase(x.VAX_LOT) ∉ ["UNKNOWN", "UNK", "58160082311"] for x in eachrow(dd)]
 sel = [x.VAX_NAME == "VARICELLA (VARIVAX)" && !ismissing(x.VAX_LOT) && uppercase(x.VAX_LOT) ∉ ["UNKNOWN", "UNK", "58160082311"] for x in eachrow(dd)]
 
-# sel = [x.VAX_NAME == "ZOSTER (SHINGRIX)" && !ismissing(x.VAX_LOT) && (uppercase(x.VAX_LOT) ∈ ["UNKNOWN", "UNK", "58160082311"]) for x in eachrow(dd)]
 
-coof = dd[sel,:]
-lots = map(coof.VAX_LOT) do st
-    st = join(uppercase(x) for x in st if isascii(x) && x in ['a':'z';'A':'Z';'0':'9'])
-    (length(st)>6 && st[1:6] == "PFIZER") ? st[7:end] : (length(st)>3 && st[1:3] == "LOT") ? st[4:end] : st
+name = "COVID19 (COVID19 (PFIZER-BIONTECH))"
+name = "COVID19 (COVID19 (MODERNA))"
+name = "COVID19 (COVID19 (JANSSEN))"
+name = "HPV (GARDASIL 9)"
+name = "ZOSTER (SHINGRIX)"
+name = "VARICELLA (VARIVAX)"
+
+
+vaxnames = ["COVID19 (COVID19 (PFIZER-BIONTECH))", "COVID19 (COVID19 (MODERNA))", "COVID19 (COVID19 (JANSSEN))", "HPV (GARDASIL 9)", "ZOSTER (SHINGRIX)", "VARICELLA (VARIVAX)"]
+
+function distbyname(name)
+    sel = [x.VAX_NAME == name && !ismissing(x.VAX_LOT) && (strip(uppercase(filter(isascii, x.VAX_LOT))) ∉ ["UNKNOWN", "UNK"]) && !occursin("58160", filter(isascii, x.VAX_LOT)) for x in eachrow(dd)]
+    # sel = [x.VAX_NAME == name && !ismissing(x.VAX_LOT) && occursin("5816008", x.VAX_LOT) for x in eachrow(dd)]
+    coof = dd[sel,:]
+    lots = map(coof.VAX_LOT) do st
+        st = join(uppercase(x) for x in st if isascii(x) && x in ['a':'z';'A':'Z';'0':'9'])
+        (length(st)>6 && st[1:6] == "PFIZER") ? st[7:end] : (length(st)>3 && st[1:3] == "LOT") ? st[4:end] : st
+    end
+    cc = hcat(sort([[a[1],a[2]] for a in countmap(lots)])...)
+    # cc[1,sortperm(cc[2,:])]
+    cc = cc[2,:]
 end
-cc = hcat(sort([[a[1],a[2]] for a in countmap(lots)])...)
-
-cc[1,sortperm(cc[2,:])]
+allcc = distbyname.(vaxnames)
 
 
 
@@ -237,4 +250,53 @@ aa = aa[:,sortperm(aa[2,:],rev=true)]
 DataFrame(Name=aa[1,:], Count=aa[2,:])
 
 
+ct = sort(cc[2,:])
+NN = size(cc,2)
+plot(ct, NN+1 .- (1:NN), xaxis=:log, yaxis=:log, m=3)
+plot(ct, NN+1 .- (1:NN), m=3)
 
+pp = map(zip(vaxnames,allcc)) do (vn,cc)
+    ct = sort(cc)
+    NN = length(cc)
+    # qq = ct[end*11÷12]
+    # simp = sort(ceil.(Int, rand(Exponential(qq/log(12)), round(Int,NN))))
+    qq = ct[end*111÷112]
+    # simp = sort([myrand(Pareto(1.5,2.0)) for _ in 1:NN]) # varivax
+    # simp = sort([myrand(Pareto(1.5,2.5)) for _ in 1:NN]) # varivax
+    # simp = sort(ceil.(Int, rand(Exponential(qq/log(112)), round(Int,NN))))
+    simp = sort(rand(Exponential(qq/log(112)), round(Int,NN)))
+    # qq = ct[end*4÷5]
+    # simp = sort(ceil.(Int, rand(Exponential(qq/log(5/4)), round(Int,NN))))
+    @show ct[end*111÷112]
+    @show simp[end*111÷112]
+    @show qq/log(112)
+    # qq = ct[end*4÷5]
+    # simp = floor.(Int, rand(Exponential(qq/log(5/4)), round(Int,NN)))
+    # simp = floor.(Int, rand(Exponential(qq/log(2)), round(Int,NN)))
+    # simp = floor.(Int, rand(Exponential(mean(cc)), round(Int,NN)))
+    # plot(ct, (1:NN), m=3, label=vn)
+    # plot(ct, NN+1 .- (1:NN), m=3)
+    # plot(ct, NN+1 .- (1:NN), m=3)
+    # plot(ct, NN+1 .- (1:NN), xaxis=:log, yaxis=:log, m=3, label=vn)
+    # plot!(simp, NN+1 .- (1:NN), xaxis=:log, yaxis=:log, m=3, label="Exponential sim.")
+    plot(ct, NN+1 .- (1:NN), yaxis=:log, m=3, label=vn)
+    plot!(simp, NN+1 .- (1:NN), yaxis=:log, m=3, label="simulation")
+    # plot(ct, NN+1 .- (1:NN), m=3, label=vn)
+    # plot!(sort(simp), NN+1 .- (1:NN), m=3, label="simulation")
+end
+plot(pp...)
+
+
+
+invlogcdf(Exponential(median(allcc[1])/log(333/332)), 0.5)
+
+
+
+mean(rand(Exponential(123), 1111))
+mean(median(rand(Exponential(123), 1111)) for it in 1:111)
+
+
+mean(sort(rand(Exponential(123), 1111))[end*11÷12] for it in 1:111)
+
+
+303 / log(12)
