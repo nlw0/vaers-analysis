@@ -31,27 +31,38 @@ axisargs = Dict(:loglog => (:xaxis=>:log, :yaxis=>:log),
                 :normal => (:xaxis=>nothing, :yaxis=>nothing)
                 )
                 
-plotstyle = :normal
+plotstyle = :loglog
+# plotstyle = :semilogy
+# plotstyle = :normal
 
-pp = map(zip(vaxnames,allcc)) do (vn,cc)
+function plotfit(vn, cc, myexp, mypareto, ρ)
     ct = sort(cc)
     NN = length(cc)
 
-    # @show myexp = fit_mle(Exponential{Float64}, Float64.(cc))
-    # @show myexp = fit_mle(Exponential{Float64}, Float64.(ct[end*985÷1000:end]))
-    
-    @show myexp = fit_mle(Exponential{Float64}, Float64.(if length(cc) > 1000 ct[end*970÷1000:end] else ct end ))
-    # @show mypareto = fit_mle(Pareto{Float64}, Float64.(cc[1:end÷2]))
-    # @show mypareto = fit_mle(Pareto{Float64}, Float64.(if length(cc) > 1000 ct[1:end*970÷1000] else ct end ))
-    @show mypareto = fit_mle(Pareto{Float64}, Float64.(if length(cc) > 1000 ct[1:end*900÷1000] else ct end ))
-    x = 1:0.1:maximum(cc)
+    x = 1:0.1:ct[end]
 
     # simp = sort(rand(myexp, NN))
     # plot!(simp, (NN+1 .- (1:NN))/NN, xaxis=:log, yaxis=:log, m=3, label="Exponential sim.")
 
     plot(ct, (NN+1 .- (1:NN))/NN, yaxis=:log, m=3, label=vn, legend=:bottomleft, msw=0, ylim=(1/(NN*1.1), 1.0))
-    plot!(x, max.(1e-10, 1 .- cdf.(myexp, x)), l=3, label="Exponential fit"; axisargs[plotstyle]...)
-    plot!(x, max.(1e-10, 1 .- cdf.(mypareto, x)), l=3, label="Pareto fit"; axisargs[plotstyle]...)
-
+    plot!(x, max.(1e-15, 1 .- cdf.(myexp, x)), l=3, label="Exponential fit"; axisargs[plotstyle]...)
+    plot!(x, max.(1e-15, 1 .- cdf.(mypareto, x)), l=3, label="Pareto fit"; axisargs[plotstyle]...)
+    plot!(x, max.(1e-15, 1 .- (ρ[1]*cdf.(mypareto, x) .+ ρ[2]*cdf.(myexp, x))), l=3, label="Mixture fit"; axisargs[plotstyle]...)
 end
-plot(pp...)
+
+allρ = [
+    [0.985, 0.015],
+    [0.985, 0.015],
+    [0.985, 0.015],
+    [0.02, 0.98],
+    [0.02, 0.98],
+    [0.02, 0.98]
+]
+
+pp = map(zip(vaxnames,allcc,allρ)) do (vn,cc,ρ)
+    ct = sort(cc)
+    @show myexp = fit_mle(Exponential{Float64}, Float64.(if length(cc) > 1000 ct[end*970÷1000:end] else ct[end*500÷1000:end] end ))
+    @show mypareto = fit_mle(Pareto{Float64}, Float64.(if length(cc) > 1000 ct[1:end*970÷1000] else ct[end÷4:end*500÷1000] end ))
+    plotfit(vn, cc, myexp, mypareto, ρ)
+end
+plot(pp..., size=(1920,1080))
