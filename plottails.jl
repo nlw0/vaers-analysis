@@ -26,6 +26,13 @@ end
 allcc = distbyname.(vaxnames)
 
 
+axisargs = Dict(:loglog => (:xaxis=>:log, :yaxis=>:log),
+                :semilogy => (:xaxis=>nothing, :yaxis=>:log),
+                :normal => (:xaxis=>nothing, :yaxis=>nothing)
+                )
+                
+plotstyle = :normal
+
 pp = map(zip(vaxnames,allcc)) do (vn,cc)
     ct = sort(cc)
     NN = length(cc)
@@ -42,23 +49,9 @@ pp = map(zip(vaxnames,allcc)) do (vn,cc)
     # simp = sort(rand(myexp, NN))
     # plot!(simp, (NN+1 .- (1:NN))/NN, xaxis=:log, yaxis=:log, m=3, label="Exponential sim.")
 
-    # plot(ct, NN+1 .- (1:NN), m=3)
-    # plot(ct, NN+1 .- (1:NN), m=3)
-    # plot(ct, (NN+1 .- (1:NN))/NN, xaxis=:log, yaxis=:log, m=3, label=vn, legend=:bottomleft, msw=0, ylim=(1/(NN*1.1), 1.0))
-    # plot!(x, max.(1e-10, 1 .- cdf.(myexp, x)), xaxis=:log, yaxis=:log, l=3, label="Exponential fit")
-    # plot!(x, max.(1e-10, 1 .- cdf.(mypareto, x)), xaxis=:log, yaxis=:log, l=3, label="Pareto fit")
-
     plot(ct, (NN+1 .- (1:NN))/NN, yaxis=:log, m=3, label=vn, legend=:bottomleft, msw=0, ylim=(1/(NN*1.1), 1.0))
-    plot!(x, max.(1e-10, 1 .- cdf.(myexp, x)), yaxis=:log, l=3, label="Exponential fit")
-    plot!(x, max.(1e-10, 1 .- cdf.(mypareto, x)), yaxis=:log, l=3, label="Pareto fit")
+    plot!(x, max.(1e-10, 1 .- cdf.(myexp, x)), l=3, label="Exponential fit"; axisargs[plotstyle]...)
+    plot!(x, max.(1e-10, 1 .- cdf.(mypareto, x)), l=3, label="Pareto fit"; axisargs[plotstyle]...)
 
-    # plot(ct, (NN+1 .- (1:NN))/NN, m=3, label=vn, legend=:bottomleft, msw=0, ylim=(1/(NN*1.1), 1.0))
-    # plot!(x, max.(1e-10, 1 .- cdf.(myexp, x)), l=3, label="Exponential fit")
-    # plot!(x, max.(1e-10, 1 .- cdf.(mypareto, x)), l=3, label="Pareto fit")
-
-    # plot(ct, NN+1 .- (1:NN), yaxis=:log, m=3, label=vn)
-    # plot!(simp, NN+1 .- (1:NN), yaxis=:log, m=3, label="simulation")
-    # plot(ct, NN+1 .- (1:NN), m=3, label=vn)
-    # plot!(sort(simp), NN+1 .- (1:NN), m=3, label="simulation")
 end
 plot(pp...)
