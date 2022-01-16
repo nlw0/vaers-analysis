@@ -66,3 +66,28 @@ pp = map(zip(vaxnames,allcc,allρ)) do (vn,cc,ρ)
     plotfit(vn, cc, myexp, mypareto, ρ)
 end
 plot(pp..., size=(1920,1080))
+
+
+
+function EMstep(mypareto, myexp, data)
+    qq = [pdf.(mypareto, data); pdf.(myexp, data)]
+    ww = qq ./ sum(qq, dims=2)
+
+    newpareto = fit_mle(Pareto{Float64}, Float64.(data), ww[:,1])
+    newexp = fit_mle(Exponential{Float64}, Float64.(data), ww[:,2])
+    mean(ww, dims=1)
+    newpareto, newexp, mean(ww, dims=1)
+end
+
+
+cc = allcc[3]
+ct = sort(cc)
+@show myexp = fit_mle(Exponential{Float64}, Float64.(if length(cc) > 1000 ct[end*970÷1000:end] else ct[end*500÷1000:end] end ))
+@show mypareto = fit_mle(Pareto{Float64}, Float64.(if length(cc) > 1000 ct[1:end*970÷1000] else ct[end÷4:end*500÷1000] end ))
+
+qq = [pdf.(mypareto, ct)  pdf.(myexp, ct)]
+ww = qq ./ sum(qq, dims=2)
+mean(ww, dims=1)
+
+
+mypareto, myexp, mm = EMstep(myexp, mypareto, cc)
