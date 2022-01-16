@@ -21,7 +21,7 @@ function distbyname(name)
     end
     cc = hcat(sort([[a[1],a[2]] for a in countmap(lots)])...)
     # cc[1,sortperm(cc[2,:])]
-    cc = cc[2,:]
+    cc = Float64.(cc[2,:])
 end
 allcc = distbyname.(vaxnames)
 
@@ -61,33 +61,42 @@ allρ = [
 
 pp = map(zip(vaxnames,allcc,allρ)) do (vn,cc,ρ)
     ct = sort(cc)
-    @show myexp = fit_mle(Exponential{Float64}, Float64.(if length(cc) > 1000 ct[end*970÷1000:end] else ct[end*500÷1000:end] end ))
-    @show mypareto = fit_mle(Pareto{Float64}, Float64.(if length(cc) > 1000 ct[1:end*970÷1000] else ct[end÷4:end*500÷1000] end ))
+    myexp = fit_mle(Exponential{Float64}, Float64.(if length(cc) > 1000 ct[end*970÷1000:end] else ct[end*500÷1000:end] end ))
+    mypareto = fit_mle(Pareto{Float64}, Float64.(if length(cc) > 1000 ct[1:end*970÷1000] else ct[end÷4:end*500÷1000] end ))
     plotfit(vn, cc, myexp, mypareto, ρ)
 end
 plot(pp..., size=(1920,1080))
 
 
 
-function EMstep(mypareto, myexp, data)
-    qq = [pdf.(mypareto, data); pdf.(myexp, data)]
+function EMstep(mypareto, myexp, mm, data)
+    qq = [pdf.(mypareto, data) pdf.(myexp, data)] .* mm'
     ww = qq ./ sum(qq, dims=2)
 
-    newpareto = fit_mle(Pareto{Float64}, Float64.(data), ww[:,1])
-    newexp = fit_mle(Exponential{Float64}, Float64.(data), ww[:,2])
-    mean(ww, dims=1)
-    newpareto, newexp, mean(ww, dims=1)
+    spl1 = sample(data, fweights(ww[:,1]), length(data))
+    spl2 = sample(data, fweights(ww[:,2]), length(data))
+    
+    newpareto = fit_mle(Pareto{Float64}, spl1)
+    newexp = fit_mle(Exponential{Float64}, spl2)
+    newmm = sum(ww, dims=1)[:] / sum(ww)
+    newpareto, newexp, newmm
 end
 
 
-cc = allcc[3]
+vn=vaxnames[2]
+cc = allcc[2]
 ct = sort(cc)
-@show myexp = fit_mle(Exponential{Float64}, Float64.(if length(cc) > 1000 ct[end*970÷1000:end] else ct[end*500÷1000:end] end ))
-@show mypareto = fit_mle(Pareto{Float64}, Float64.(if length(cc) > 1000 ct[1:end*970÷1000] else ct[end÷4:end*500÷1000] end ))
+@show mypareto = fit_mle(Pareto{Float64}, Float64.(if length(cc) > 1000 ct[1:end*970÷1000] else ct[end÷4:end÷2] end ))
+@show myexp = fit_mle(Exponential{Float64}, Float64.(if length(cc) > 1000 ct[end*970÷1000:end] else ct[end÷2:end] end ))
 
-qq = [pdf.(mypareto, ct)  pdf.(myexp, ct)]
-ww = qq ./ sum(qq, dims=2)
-mean(ww, dims=1)
+# qq = [pdf.(mypareto, ct)  pdf.(myexp, ct)]
+# ww = qq ./ sum(qq, dims=2)
+# mean(ww, dims=1)
+# spl1 = sample(ct, fweights(ww[:,1]), length(ct)*10)
+# spl2 = sample(ct, fweights(ww[:,2]), length(ct)*10)
+# fit_mle(Pareto{Float64}, spl1)
+# fit_mle(Exponential{Float64}, spl2)
+mm = [0.985, 0.015]
+mypareto, myexp, mm = EMstep(myexp, mypareto, mm, cc)
 
-
-mypareto, myexp, mm = EMstep(myexp, mypareto, cc)
+plotfit(vn, cc, myexp, mypareto, mm)
